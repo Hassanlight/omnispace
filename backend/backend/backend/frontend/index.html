@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omnichannel Messaging</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: #075e54;
+            color: white;
+        }
+
+        .sidebar-header h1 { font-size: 18px; margin-bottom: 10px; }
+
+        .platform-tabs {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .platform-tab {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .platform-tab.active { background: white; color: #075e54; }
+
+        .conversation-list { flex: 1; overflow-y: auto; }
+
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conversation-item:hover { background: #f5f5f5; }
+        .conversation-item.active { background: #e3f2fd; }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .avatar.whatsapp { background: #25d366; color: white; }
+        .avatar.instagram { background: #e4405f; color: white; }
+        .avatar.facebook { background: #1877f2; color: white; }
+
+        .conversation-info { flex: 1; }
+        .conversation-name { font-weight: 600; margin-bottom: 5px; }
+        .conversation-preview {
+            font-size: 13px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .conversation-meta { text-align: right; }
+        .time { font-size: 11px; color: #999; }
+        .unread {
+            background: #25d366;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #e5ddd5;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-info { display: flex; align-items: center; gap: 10px; }
+
+        .platform-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: white;
+        }
+
+        .platform-badge.whatsapp { background: #25d366; }
+        .platform-badge.instagram { background: #e4405f; }
+        .platform-badge.facebook { background: #1877f2; }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            word-wrap: break-word;
+        }
+
+        .message.incoming { align-self: flex-start; background: white; }
+        .message.outgoing { align-self: flex-end; background: #dcf8c6; }
+
+        .message-time {
+            font-size: 10px;
+            color: #999;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .chat-input-container {
+            padding: 15px;
+            background: #f0f0f0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
+        .send-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #075e54;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .ai-panel {
+            background: white;
+            border-top: 2px solid #e0f0e0;
+            padding: 15px;
+            display: none;
+        }
+
+        .ai-panel.active { display: block; }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-right: 10px;
+        }
+
+        .btn-primary { background: #1976d2; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Messages</h1>
+            <div class="platform-tabs">
+                <button class="platform-tab active" onclick="filterPlatform('all')">All</button>
+                <button class="platform-tab" onclick="filterPlatform('whatsapp')">WA</button>
+                <button class="platform-tab" onclick="filterPlatform('instagram')">IG</button>
+                <button class="platform-tab" onclick="filterPlatform('facebook')">FB</button>
+            </div>
+        </div>
+        <div class="conversation-list" id="conversationList"></div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+        <div class="empty-state" id="emptyState">
+            <h2>Select a conversation</h2>
+        </div>
+
+        <div class="chat-header" id="chatHeader" style="display: none;">
+            <div class="chat-header-info">
+                <div class="avatar" id="headerAvatar">👤</div>
+                <div>
+                    <h2 id="headerName">Customer</h2>
+                    <span class="platform-badge" id="headerPlatform">WhatsApp</span>
+                </div>
+            </div>
+            <button onclick="toggleAI()" class="btn btn-secondary">🤖 AI</button>
+        </div>
+
+        <div class="chat-messages" id="chatMessages" style="display: none;"></div>
+
+        <div class="ai-panel" id="aiPanel">
+            <h3>AI Suggestion</h3>
+            <p id="aiSuggestion">Click Generate to get AI reply...</p>
+            <button class="btn btn-secondary" onclick="generateAI()">Generate</button>
+            <button class="btn btn-primary" onclick="useAI()">Use This</button>
+        </div>
+
+        <div class="chat-input-container" id="chatInput" style="display: none;">
+            <input type="text" class="chat-input" id="messageInput" placeholder="Type message..." onkeypress="handleKey(event)">
+            <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
+    <script>
+        const API_URL = 'http://localhost:3001';
+        let socket, currentConversation, conversations = [], aiReply = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversations();
+            initSocket();
+        });
+
+        function initSocket() {
+            socket = io(API_URL);
+            socket.on('new_message', (msg) => {
+                if (currentConversation && msg.senderId === currentConversation.customerId) {
+                    addMessage(msg);
+                }
+                loadConversations();
+            });
+        }
+
+        async function loadConversations() {
+            try {
+                const res = await fetch(`${API_URL}/api/conversations`);
+                conversations = await res.json();
+                renderConversations();
+            } catch (e) {
+                showDemo();
+            }
+        }
+
+        function showDemo() {
+            conversations = [
+                { _id: '1', customerId: 'wa_123', customerName: 'John', platform: 'whatsapp', lastMessage: 'Hello', updatedAt: new Date(), unreadCount: 1 },
+                { _id: '2', customerId: 'ig_456', customerName: 'Sarah', platform: 'instagram', lastMessage: 'Thanks', updatedAt: new Date(), unreadCount: 0 }
+            ];
+            renderConversations();
+        }
+
+        function renderConversations() {
+            const list = document.getElementById('conversationList');
+            list.innerHTML = conversations.map(c => `
+                <div class="conversation-item ${currentConversation?._id === c._id ? 'active' : ''}" onclick="selectConversation('${c._id}')">
+                    <div class="avatar ${c.platform}">${c.platform === 'whatsapp' ? '📱' : c.platform === 'instagram' ? '📷' : '👤'}</div>
+                    <div class="conversation-info">
+                        <div class="conversation-name">${c.customerName}</div>
+                        <div class="conversation-preview">${c.lastMessage}</div>
+                    </div>
+                    <div class="conversation-meta">
+                        <div class="time">${new Date(c.updatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        ${c.unreadCount ? `<span class="unread">${c.unreadCount}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function selectConversation(id) {
+            currentConversation = conversations.find(c => c._id === id);
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('chatHeader').style.display = 'flex';
+            document.getElementById('chatMessages').style.display = 'flex';
+            document.getElementById('chatInput').style.display = 'flex';
+
+            document.getElementById('headerName').textContent = currentConversation.customerName;
+            document.getElementById('headerPlatform').textContent = currentConversation.platform;
+            document.getElementById('headerPlatform').className = `platform-badge ${currentConversation.platform}`;
+
+            const res = await fetch(`${API_URL}/api/messages/${currentConversation.customerId}`);
+            const messages = await res.json();
+            
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+            messages.forEach(addMessage);
+            
+            if (socket) socket.emit('join_conversation', currentConversation.customerId);
+            renderConversations();
+        }
+
+        function addMessage(msg) {
+            const div = document.createElement('div');
+            div.className = `message ${msg.direction}`;
+            div.innerHTML = `<div>${msg.content}</div><div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>`;
+            document.getElementById('chatMessages').appendChild(div);
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!content || !currentConversation) return;
+
+            const msg = {
+                platform: currentConversation.platform,
+                senderId: currentConversation.customerId,
+                senderName: 'Agent',
+                content: content,
+                direction: 'outgoing'
+            };
+
+            addMessage(msg);
+            input.value = '';
+            
+            await fetch(`${API_URL}/api/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(msg)
+            });
+        }
+
+        function handleKey(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function toggleAI() {
+            document.getElementById('aiPanel').classList.toggle('active');
+        }
+
+        async function generateAI() {
+            const res = await fetch(`${API_URL}/api/ai/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ conversationId: currentConversation.customerId })
+            });
+            const data = await res.json();
+            aiReply = data.reply;
+            document.getElementById('aiSuggestion').textContent = data.reply;
+        }
+
+        function useAI() {
+            document.getElementById('messageInput').value = aiReply;
+        }
+
+        function filterPlatform(platform) {
+            document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const filtered = platform === 'all' ? conversations : conversations.filter(c => c.platform === platform);
+            const list = document.getElementById('conversationList');
+            list.innerHTML = filtered.map(c => `
+                <div class="conversation-item ${currentConversation?._id === c._id ? 'active' : ''}" onclick="selectConversation('${c._id}')">
+                    <div class="avatar ${c.platform}">${c.platform === 'whatsapp' ? '📱' : '📷'}</div>
+                    <div class="conversation-info">
+                        <div class="conversation-name">${c.customerName}</div>
+                        <div class="conversation-preview">${c.lastMessage}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
